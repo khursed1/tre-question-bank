@@ -27,6 +27,7 @@ export type Question = {
   option_b: string | null;
   option_c: string | null;
   option_d: string | null;
+  option_e: string | null;
   answer: string | null;
   explanation: string | null;
   exam: string | null;
@@ -37,5 +38,6 @@ export type Question = {
   option_b_image_url: string | null;
   option_c_image_url: string | null;
   option_d_image_url: string | null;
+  option_e_image_url: string | null;
   created_at: string;
 };

@@ -25,6 +25,7 @@ export default function EditQuestionPage({ params }: { params: Promise<{ id: str
     option_b: "",
     option_c: "",
     option_d: "",
+    option_e: "",
     answer: "",
     explanation: "",
     exam: "",
@@ -34,6 +35,7 @@ export default function EditQuestionPage({ params }: { params: Promise<{ id: str
     option_b_image_url: "",
     option_c_image_url: "",
     option_d_image_url: "",
+    option_e_image_url: "",
   });
 
   useEffect(() => {
@@ -58,6 +60,7 @@ export default function EditQuestionPage({ params }: { params: Promise<{ id: str
         option_b: q.option_b || "",
         option_c: q.option_c || "",
         option_d: q.option_d || "",
+        option_e: q.option_e || "",
         answer: q.answer || "",
         explanation: q.explanation || "",
         exam: q.exam || "",
@@ -67,6 +70,7 @@ export default function EditQuestionPage({ params }: { params: Promise<{ id: str
         option_b_image_url: q.option_b_image_url || "",
         option_c_image_url: q.option_c_image_url || "",
         option_d_image_url: q.option_d_image_url || "",
+        option_e_image_url: q.option_e_image_url || "",
       });
 
       // Fetch subtopics for this subject
@@ -250,6 +254,11 @@ export default function EditQuestionPage({ params }: { params: Promise<{ id: str
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Option D</label>
                 <MarkdownTextarea rows={2} value={formData.option_d} onChange={val => setFormData({...formData, option_d: val})} className="mb-2" placeholder="Leave empty if not applicable" />
                 {renderImageUpload("option_d_image_url", "Option D")}
+              </div>
+              <div className="bg-gray-50 p-4 rounded border border-gray-200 md:col-span-2 lg:col-span-1">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Option E</label>
+                <MarkdownTextarea rows={2} value={formData.option_e} onChange={val => setFormData({...formData, option_e: val})} className="mb-2" placeholder="Leave empty if not applicable" />
+                {renderImageUpload("option_e_image_url", "Option E")}
               </div>
             </div>
           </div>

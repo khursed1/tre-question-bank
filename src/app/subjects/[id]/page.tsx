@@ -509,6 +509,15 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
                       {q.option_d_image_url && <img src={q.option_d_image_url} alt="Option D" className="mt-2 max-h-32 rounded border border-gray-200" />}
                     </div>
                   )}
+                  {(q.option_e || q.option_e_image_url) && (
+                    <div className="md:col-span-2 lg:col-span-1">
+                      <div className="flex items-start">
+                        <span className="font-semibold text-gray-500 mr-2 mt-0.5">E.</span> 
+                        <MarkdownRenderer content={q.option_e} className="flex-1" />
+                      </div>
+                      {q.option_e_image_url && <img src={q.option_e_image_url} alt="Option E" className="mt-2 max-h-32 rounded border border-gray-200" />}
+                    </div>
+                  )}
                 </div>
 
                 {(q.answer || q.explanation) && (
@@ -751,6 +760,15 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
                       <div className="flex-1">
                         <MarkdownRenderer content={q.option_d} />
                         {q.option_d_image_url && <img src={q.option_d_image_url} className="mt-1 max-h-24 object-contain" alt="Option D" />}
+                      </div>
+                    </div>
+                  )}
+                  {(q.option_e || q.option_e_image_url) && (
+                    <div className="flex gap-2">
+                      <span className="font-medium">E)</span> 
+                      <div className="flex-1">
+                        <MarkdownRenderer content={q.option_e} />
+                        {q.option_e_image_url && <img src={q.option_e_image_url} className="mt-1 max-h-24 object-contain" alt="Option E" />}
                       </div>
                     </div>
                   )}

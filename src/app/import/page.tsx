@@ -131,6 +131,7 @@ export default function ImportPage() {
           option_b: q.option_b || q.optionB || q.B || q.b || q.options?.B || q.options?.b || null,
           option_c: q.option_c || q.optionC || q.C || q.c || q.options?.C || q.options?.c || null,
           option_d: q.option_d || q.optionD || q.D || q.d || q.options?.D || q.options?.d || null,
+          option_e: q.option_e || q.optionE || q.E || q.e || q.options?.E || q.options?.e || null,
           answer: importAnswers ? (q.answer || q.Answer || null) : null,
           explanation: importExplanations ? (q.explanation || q.Explanation || null) : null,
           exam: q.exam || q.Exam || null,
