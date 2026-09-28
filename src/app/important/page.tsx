@@ -96,7 +96,7 @@ export default function ImportantQuestionsPage() {
                   </button>
                 </div>
 
-                <div className="flex gap-2 text-xs text-gray-500 mb-3 flex-wrap">
+                <div className="flex gap-2 text-xs text-gray-500 mb-3 flex-wrap pr-12">
                   <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-100 font-medium">
                     {q.subjects?.name}
                   </span>

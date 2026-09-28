@@ -527,10 +527,10 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
                   </button>
                 </div>
 
-                <div className="flex gap-2 text-xs text-gray-500 mb-3 pl-8">
+                <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-3 pl-8 pr-24">
                   {q.subtopics?.name && <span className="bg-gray-100 px-2 py-1 rounded">{q.subtopics.name}</span>}
                   {q.exam && <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-100">{q.exam} {q.year}</span>}
-                  <span className="text-gray-400">#{(page - 1) * itemsPerPage + idx + 1}</span>
+                  <span className="text-gray-400 mt-0.5">#{(page - 1) * itemsPerPage + idx + 1}</span>
                 </div>
 
                 <div className="mb-4 pl-8">
