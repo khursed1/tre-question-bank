@@ -1,0 +1,96 @@
+[
+  {
+    "subject": "Computer Networks",
+    "subtopic": "OSI Model",
+    "question": "Which layer of the OSI model is responsible for reliable end-to-end data delivery?",
+    "option_a": "Network Layer",
+    "option_b": "Transport Layer",
+    "option_c": "Data Link Layer",
+    "option_d": "Application Layer",
+    "answer": "B",
+    "explanation": "The Transport Layer (Layer 4) ensures reliable, end-to-end delivery of data packets using protocols like TCP.",
+    "exam": "GATE CS",
+    "year": 2021
+  },
+  {
+    "subject": "Computer Networks",
+    "subtopic": "TCP/IP",
+    "question": "Which of the following transport layer protocols is connectionless?",
+    "option_a": "TCP",
+    "option_b": "UDP",
+    "option_c": "SCTP",
+    "option_d": "DCCP",
+    "answer": "B",
+    "explanation": "UDP (User Datagram Protocol) is a connectionless, unreliable transport protocol.",
+    "exam": "NET",
+    "year": 2020
+  },
+  {
+    "subject": "Computer Networks",
+    "subtopic": "Routing",
+    "question": "In distance vector routing, each router shares its routing table with:",
+    "option_a": "Every other router in the network",
+    "option_b": "Only its immediate neighbors",
+    "option_c": "The central controller",
+    "option_d": "None of the above",
+    "answer": "B",
+    "explanation": "In distance vector routing algorithms (like RIP), routers broadcast their entire routing table only to their directly connected neighbors."
+  },
+  {
+    "subject": "Operating Systems",
+    "subtopic": "Process Management",
+    "question": "Which of the following state transitions is not possible for a process?",
+    "option_a": "Running to Ready",
+    "option_b": "Ready to Waiting",
+    "option_c": "Running to Waiting",
+    "option_d": "Waiting to Ready",
+    "answer": "B",
+    "explanation": "A process cannot transition directly from Ready to Waiting. It must first be dispatched to the Running state before it can issue an I/O request and transition to Waiting.",
+    "exam": "GATE CS",
+    "year": 2022
+  },
+  {
+    "subject": "Operating Systems",
+    "subtopic": "Memory Management",
+    "question": "What is the primary purpose of Virtual Memory?",
+    "option_a": "To speed up the computer",
+    "option_b": "To allow execution of processes that are not completely in memory",
+    "option_c": "To replace physical RAM completely",
+    "option_d": "To permanently store user data",
+    "answer": "B",
+    "explanation": "Virtual Memory abstracts physical RAM and disk storage to give programs the illusion of a large, contiguous memory space, allowing programs larger than physical memory to run."
+  },
+  {
+    "subject": "DBMS",
+    "subtopic": "SQL",
+    "question": "Which SQL command is used to remove all rows from a table without logging the individual row deletions?",
+    "option_a": "DROP",
+    "option_b": "DELETE",
+    "option_c": "TRUNCATE",
+    "option_d": "REMOVE",
+    "answer": "C",
+    "explanation": "TRUNCATE is a DDL command that quickly removes all records from a table without logging individual row deletions, unlike the DELETE command."
+  },
+  {
+    "subject": "DBMS",
+    "subtopic": "Normalization",
+    "question": "A relation is in Boyce-Codd Normal Form (BCNF) if and only if every determinant is a:",
+    "option_a": "Prime attribute",
+    "option_b": "Candidate key",
+    "option_c": "Foreign key",
+    "option_d": "Super key",
+    "answer": "D",
+    "explanation": "By definition, a relation is in BCNF if for every non-trivial functional dependency X -> Y, X is a super key."
+  },
+  {
+    "subject": "Digital Logic",
+    "subtopic": "Boolean Algebra",
+    "question": "The boolean expression A + A'B is equivalent to:",
+    "option_a": "A",
+    "option_b": "B",
+    "option_c": "A + B",
+    "option_d": "A' + B",
+    "answer": "C",
+    "explanation": "By the distributive law and simplification (Rule of Consensus variation): A + A'B = (A + A')(A + B) = 1(A + B) = A + B."
+  }
+]
