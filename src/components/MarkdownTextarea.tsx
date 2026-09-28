@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef } from "react";
-import { Code, Bold, Italic, Calculator, Wand2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Code, Bold, Italic, Calculator, Wand2, Sparkles } from "lucide-react";
+import { convertToLatex } from "@/app/actions/latex";
 
 interface Props {
   value: string;
@@ -14,6 +15,37 @@ interface Props {
 
 export default function MarkdownTextarea({ value, onChange, rows = 3, placeholder, className = "", required }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isConverting, setIsConverting] = useState(false);
+
+  const handleAiConvert = async () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = value.substring(start, end);
+    
+    if (!selectedText.trim()) {
+      alert("Please select some text or math to convert first!");
+      return;
+    }
+
+    setIsConverting(true);
+    try {
+      const response = await convertToLatex(selectedText);
+      if (response.error) {
+        alert(response.error);
+        return;
+      }
+      if (response.result) {
+        formatText('', '', '', response.result);
+      }
+    } catch (e) {
+      alert("Error connecting to AI service.");
+    } finally {
+      setIsConverting(false);
+    }
+  };
 
   const formatText = (prefix: string, suffix: string, defaultText: string = "", replacementOverride: string | null = null) => {
     const textarea = textareaRef.current;
@@ -110,6 +142,15 @@ export default function MarkdownTextarea({ value, onChange, rows = 3, placeholde
         </button>
         <button type="button" onClick={() => formatText('$', '$', 'math')} className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-200 rounded transition-colors" title="Math Formula">
           <Calculator size={15} />
+        </button>
+        <button 
+          type="button" 
+          onClick={handleAiConvert} 
+          disabled={isConverting}
+          className={`p-1.5 rounded transition-colors ${isConverting ? 'text-blue-400 animate-pulse' : 'text-purple-600 hover:bg-purple-100'}`} 
+          title="AI Magic Convert to LaTeX"
+        >
+          <Sparkles size={15} />
         </button>
       </div>
       <textarea
