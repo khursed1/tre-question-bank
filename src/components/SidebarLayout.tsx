@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { BookOpen, Upload, Folder, Star, Menu, X } from "lucide-react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { BookOpen, Upload, Folder, Star, Menu, X, Library } from "lucide-react";
 
 export default function SidebarLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const category = searchParams.get('category') || 'CS';
 
   const closeSidebar = () => setSidebarOpen(false);
 
@@ -48,8 +50,11 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
           </button>
         </div>
         <nav className="flex-1 px-4 space-y-2 mt-2">
-          <Link onClick={closeSidebar} href="/" className={`flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 ${pathname === '/' ? 'bg-gray-100 font-medium' : ''}`}>
-            <BookOpen size={18} /> Browse Questions
+          <Link onClick={closeSidebar} href="/" className={`flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 ${pathname === '/' && category !== 'General' ? 'bg-gray-100 font-medium' : ''}`}>
+            <BookOpen size={18} /> CS Subjects
+          </Link>
+          <Link onClick={closeSidebar} href="/?category=General" className={`flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 ${pathname === '/' && category === 'General' ? 'bg-gray-100 font-medium' : ''}`}>
+            <Library size={18} /> General Subjects
           </Link>
           <Link onClick={closeSidebar} href="/subjects" className={`flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 ${pathname === '/subjects' ? 'bg-gray-100 font-medium' : ''}`}>
             <Folder size={18} /> Manage Subjects

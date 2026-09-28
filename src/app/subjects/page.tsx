@@ -8,6 +8,7 @@ export default function SubjectsPage() {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [newSubject, setNewSubject] = useState("");
+  const [newSubjectCategory, setNewSubjectCategory] = useState("CS");
 
   // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -43,7 +44,7 @@ export default function SubjectsPage() {
 
     const { error } = await supabase
       .from("subjects")
-      .insert({ name: newSubject.trim() });
+      .insert({ name: newSubject.trim(), category: newSubjectCategory });
     
     if (!error) {
       setNewSubject("");
@@ -206,6 +207,14 @@ export default function SubjectsPage() {
             placeholder="e.g., Computer Networks"
             className="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
+          <select
+            value={newSubjectCategory}
+            onChange={(e) => setNewSubjectCategory(e.target.value)}
+            className="border border-gray-300 rounded-md px-4 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="CS">CS Subject</option>
+            <option value="General">General Subject</option>
+          </select>
           <button
             type="submit"
             disabled={!newSubject.trim()}
@@ -275,9 +284,14 @@ export default function SubjectsPage() {
                       <Folder className="text-gray-400 shrink-0" size={20} />
                       <div className="flex-1 min-w-0">
                         <span className="font-medium text-gray-800 truncate block">{subject.name}</span>
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full inline-block mt-1">
-                          {subject.questions?.[0]?.count || 0} questions
-                        </span>
+                        <div>
+                          <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full inline-block mt-1 mr-2 border border-blue-100">
+                            {subject.category === 'General' ? 'General' : 'CS'}
+                          </span>
+                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full inline-block mt-1">
+                            {subject.questions?.[0]?.count || 0} questions
+                          </span>
+                        </div>
                       </div>
                     </div>
                     <div 

@@ -4,10 +4,14 @@ import { Folder } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
+  const params = await searchParams;
+  const category = params.category || 'CS';
+
   const { data: subjects, error } = await supabase
     .from("subjects")
-    .select("*, questions(count)");
+    .select("*, questions(count)")
+    .eq("category", category);
 
   if (error) {
     console.error("Error fetching subjects:", error);
@@ -16,7 +20,7 @@ export default async function Home() {
   return (
     <div className="max-w-5xl mx-auto">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Question Bank</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{category === 'General' ? 'General Subjects' : 'CS Subjects'}</h1>
         <p className="text-gray-500 mt-2">Select a subject to browse questions.</p>
       </header>
 
