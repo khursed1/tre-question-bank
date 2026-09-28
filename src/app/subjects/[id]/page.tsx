@@ -4,13 +4,15 @@ import { useState, useEffect, use, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { Search, Filter, Edit, Trash2, Star, Download, ChevronLeft, ChevronRight, X, FolderInput, CheckSquare, Square, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 
 export default function SubjectQuestionsPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
   const subjectId = unwrappedParams.id;
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const searchParams = useSearchParams();
+  const highlightId = searchParams.get('highlight');
   
   const [subject, setSubject] = useState<any>(null);
   const [subtopics, setSubtopics] = useState<any[]>([]);
@@ -18,16 +20,46 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   
+  const getInitialState = (key: string, defaultVal: any) => {
+    if (typeof window === 'undefined') return defaultVal;
+    const cached = sessionStorage.getItem(`view_state_${subjectId}`);
+    if (cached) {
+      try {
+         const parsed = JSON.parse(cached);
+         return parsed[key] !== undefined ? parsed[key] : defaultVal;
+      } catch(e) {}
+    }
+    return defaultVal;
+  };
+
   // Filters
-  const [search, setSearch] = useState("");
-  const [selectedSubtopic, setSelectedSubtopic] = useState("all");
-  const [examFilter, setExamFilter] = useState("");
-  const [yearFilter, setYearFilter] = useState("");
-  const [hasAnswerFilter, setHasAnswerFilter] = useState("all");
+  const [search, setSearch] = useState(() => getInitialState('search', ""));
+  const [selectedSubtopic, setSelectedSubtopic] = useState(() => getInitialState('selectedSubtopic', "all"));
+  const [examFilter, setExamFilter] = useState(() => getInitialState('examFilter', ""));
+  const [yearFilter, setYearFilter] = useState(() => getInitialState('yearFilter', ""));
+  const [hasAnswerFilter, setHasAnswerFilter] = useState(() => getInitialState('hasAnswerFilter', "all"));
+  const [sortOrder, setSortOrder] = useState(() => getInitialState('sortOrder', "newest"));
   
   // Pagination
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => getInitialState('page', 1));
   const itemsPerPage = 20;
+
+  useEffect(() => {
+    sessionStorage.setItem(`view_state_${subjectId}`, JSON.stringify({
+      search, selectedSubtopic, examFilter, yearFilter, hasAnswerFilter, sortOrder, page
+    }));
+  }, [search, selectedSubtopic, examFilter, yearFilter, hasAnswerFilter, sortOrder, page, subjectId]);
+
+  useEffect(() => {
+    if (highlightId && !loading && questions.length > 0) {
+      setTimeout(() => {
+        const el = document.getElementById(`q-${highlightId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 500);
+    }
+  }, [highlightId, loading, questions]);
 
   // PDF Export Modal State
   const [showExportModal, setShowExportModal] = useState(false);
@@ -53,7 +85,7 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
 
   useEffect(() => {
     fetchQuestions();
-  }, [subjectId, selectedSubtopic, examFilter, yearFilter, hasAnswerFilter, search]);
+  }, [subjectId, selectedSubtopic, examFilter, yearFilter, hasAnswerFilter, search, sortOrder]);
 
   const fetchSubjectData = async () => {
     const cacheKey = `subject_data_${subjectId}`;
@@ -76,7 +108,7 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
   };
 
   const fetchQuestions = async () => {
-    const cacheKey = `questions_${subjectId}_${selectedSubtopic}_${examFilter}_${yearFilter}_${hasAnswerFilter}_${search}`;
+    const cacheKey = `questions_${subjectId}_${selectedSubtopic}_${examFilter}_${yearFilter}_${hasAnswerFilter}_${search}_${sortOrder}`;
     const cachedData = sessionStorage.getItem(cacheKey);
     
     if (cachedData) {
@@ -106,7 +138,11 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
       query = query.ilike("question_text", `%${search}%`);
     }
 
-    query = query.order("created_at", { ascending: false });
+    if (sortOrder === "oldest") {
+      query = query.order("created_at", { ascending: true });
+    } else {
+      query = query.order("created_at", { ascending: false });
+    }
 
     const { data, error } = await query;
     if (!error && data) {
@@ -122,7 +158,7 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
   };
 
   const updateCache = (newQuestions: any[]) => {
-    const cacheKey = `questions_${subjectId}_${selectedSubtopic}_${examFilter}_${yearFilter}_${hasAnswerFilter}_${search}`;
+    const cacheKey = `questions_${subjectId}_${selectedSubtopic}_${examFilter}_${yearFilter}_${hasAnswerFilter}_${search}_${sortOrder}`;
     sessionStorage.setItem(cacheKey, JSON.stringify(newQuestions));
   };
 
@@ -276,14 +312,14 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
               type="text" 
               placeholder="Search questions..." 
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
           
           <select 
             value={selectedSubtopic} 
-            onChange={(e) => setSelectedSubtopic(e.target.value)}
+            onChange={(e) => { setSelectedSubtopic(e.target.value); setPage(1); }}
             className="border border-gray-300 rounded-md px-3 py-2 bg-white outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Subtopic: All</option>
@@ -292,7 +328,7 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
 
           <select 
             value={hasAnswerFilter} 
-            onChange={(e) => setHasAnswerFilter(e.target.value)}
+            onChange={(e) => { setHasAnswerFilter(e.target.value); setPage(1); }}
             className="border border-gray-300 rounded-md px-3 py-2 bg-white outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Answers: All</option>
@@ -304,15 +340,24 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
             type="text" 
             placeholder="Exam (e.g. GATE)" 
             value={examFilter}
-            onChange={(e) => setExamFilter(e.target.value)}
+            onChange={(e) => { setExamFilter(e.target.value); setPage(1); }}
             className="w-32 border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
           />
+          
+          <select 
+            value={sortOrder} 
+            onChange={(e) => { setSortOrder(e.target.value); setPage(1); }}
+            className="border border-gray-300 rounded-md px-3 py-2 bg-white outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+          </select>
           
           <input 
             type="number" 
             placeholder="Year" 
             value={yearFilter}
-            onChange={(e) => setYearFilter(e.target.value)}
+            onChange={(e) => { setYearFilter(e.target.value); setPage(1); }}
             className="w-24 border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -379,7 +424,11 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
             {currentQuestions.map((q, idx) => (
               <div 
                 key={q.id} 
-                className={`bg-white p-5 rounded-lg border shadow-sm relative group transition-colors ${selectedQuestions.includes(q.id) ? 'border-blue-400 ring-1 ring-blue-400' : 'border-gray-200'}`}
+                id={`q-${q.id}`}
+                className={`bg-white p-5 rounded-lg border shadow-sm relative group transition-all duration-700
+                  ${selectedQuestions.includes(q.id) ? 'border-blue-400 ring-1 ring-blue-400' : 'border-gray-200'}
+                  ${highlightId === q.id ? 'ring-4 ring-yellow-300 bg-yellow-50/30' : ''}
+                `}
                 onTouchStart={() => handleTouchStart(q.id)}
                 onTouchEnd={handleTouchEnd}
                 onTouchMove={handleTouchEnd}

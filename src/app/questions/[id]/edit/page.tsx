@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { Save, X, ImagePlus, Loader2, Trash2 } from "lucide-react";
+import MarkdownTextarea from "@/components/MarkdownTextarea";
 
 export default function EditQuestionPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -137,7 +138,7 @@ export default function EditQuestionPage({ params }: { params: Promise<{ id: str
     if (!error) {
       sessionStorage.clear(); // Clear cache so new edits show up instantly
       router.refresh(); // Clear Next.js router cache
-      router.push(`/subjects/${formData.subject_id}`);
+      router.push(`/subjects/${formData.subject_id}?highlight=${questionId}`);
     } else {
       alert("Error saving question: " + error.message);
     }
@@ -223,7 +224,7 @@ export default function EditQuestionPage({ params }: { params: Promise<{ id: str
 
           <div className="border-t border-gray-100 pt-6">
             <label className="block text-sm font-medium text-gray-900 mb-2">Question</label>
-            <textarea required rows={4} value={formData.question_text} onChange={e => setFormData({...formData, question_text: e.target.value})} className="w-full border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+            <MarkdownTextarea required rows={4} value={formData.question_text} onChange={val => setFormData({...formData, question_text: val})} />
             {renderImageUpload("image_url", "Question")}
           </div>
 
@@ -232,22 +233,22 @@ export default function EditQuestionPage({ params }: { params: Promise<{ id: str
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
               <div className="bg-gray-50 p-4 rounded border border-gray-200">
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Option A</label>
-                <textarea rows={2} value={formData.option_a} onChange={e => setFormData({...formData, option_a: e.target.value})} className="w-full border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 mb-2" placeholder="Markdown supported" />
+                <MarkdownTextarea rows={2} value={formData.option_a} onChange={val => setFormData({...formData, option_a: val})} className="mb-2" placeholder="Markdown supported" />
                 {renderImageUpload("option_a_image_url", "Option A")}
               </div>
               <div className="bg-gray-50 p-4 rounded border border-gray-200">
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Option B</label>
-                <textarea rows={2} value={formData.option_b} onChange={e => setFormData({...formData, option_b: e.target.value})} className="w-full border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 mb-2" placeholder="Markdown supported" />
+                <MarkdownTextarea rows={2} value={formData.option_b} onChange={val => setFormData({...formData, option_b: val})} className="mb-2" placeholder="Markdown supported" />
                 {renderImageUpload("option_b_image_url", "Option B")}
               </div>
               <div className="bg-gray-50 p-4 rounded border border-gray-200">
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Option C</label>
-                <textarea rows={2} value={formData.option_c} onChange={e => setFormData({...formData, option_c: e.target.value})} className="w-full border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 mb-2" placeholder="Leave empty if not applicable" />
+                <MarkdownTextarea rows={2} value={formData.option_c} onChange={val => setFormData({...formData, option_c: val})} className="mb-2" placeholder="Leave empty if not applicable" />
                 {renderImageUpload("option_c_image_url", "Option C")}
               </div>
               <div className="bg-gray-50 p-4 rounded border border-gray-200">
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Option D</label>
-                <textarea rows={2} value={formData.option_d} onChange={e => setFormData({...formData, option_d: e.target.value})} className="w-full border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 mb-2" placeholder="Leave empty if not applicable" />
+                <MarkdownTextarea rows={2} value={formData.option_d} onChange={val => setFormData({...formData, option_d: val})} className="mb-2" placeholder="Leave empty if not applicable" />
                 {renderImageUpload("option_d_image_url", "Option D")}
               </div>
             </div>
@@ -256,7 +257,7 @@ export default function EditQuestionPage({ params }: { params: Promise<{ id: str
           <div className="border-t border-gray-100 pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">Answer</label>
-              <textarea rows={2} placeholder="e.g. A, B, or exact text. Markdown supported." value={formData.answer} onChange={e => setFormData({...formData, answer: e.target.value})} className="w-full border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500" />
+              <MarkdownTextarea rows={2} placeholder="e.g. A, B, or exact text. Markdown supported." value={formData.answer} onChange={val => setFormData({...formData, answer: val})} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">Exam & Year</label>
@@ -269,7 +270,7 @@ export default function EditQuestionPage({ params }: { params: Promise<{ id: str
 
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">Explanation</label>
-            <textarea rows={3} value={formData.explanation} onChange={e => setFormData({...formData, explanation: e.target.value})} className="w-full border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+            <MarkdownTextarea rows={3} value={formData.explanation} onChange={val => setFormData({...formData, explanation: val})} />
           </div>
         </form>
       </div>
