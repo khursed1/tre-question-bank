@@ -515,7 +515,7 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
                 </div>
 
                 {/* Actions */}
-                <div className="absolute right-4 top-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute right-4 top-4 flex gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                   <button onClick={() => toggleImportant(q.id, q.is_important)} className="p-1.5 bg-gray-100 rounded hover:bg-yellow-100 text-gray-600 hover:text-yellow-600 transition-colors">
                     <Star size={16} fill={q.is_important ? "currentColor" : "none"} className={q.is_important ? "text-yellow-500" : ""} />
                   </button>
