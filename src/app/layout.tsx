@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   description: "A simple question bank management app",
 };
 
+import { Suspense } from "react";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -19,9 +21,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} antialiased bg-gray-50 text-gray-900`}>
-        <SidebarLayout>
-          {children}
-        </SidebarLayout>
+        <Suspense fallback={<div className="p-8 text-center">Loading Layout...</div>}>
+          <SidebarLayout>
+            {children}
+          </SidebarLayout>
+        </Suspense>
       </body>
     </html>
   );
