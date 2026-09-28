@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { Search, Filter, Edit, Trash2, Star, Download, ChevronLeft, ChevronRight, X, FolderInput, CheckSquare, Square, Loader2 } from "lucide-react";
+import { Search, Filter, Edit, Trash2, Star, Download, ChevronLeft, ChevronRight, ChevronDown, X, FolderInput, CheckSquare, Square, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
@@ -40,6 +40,7 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
     return Array.isArray(init) ? init : (init ? [init] : []);
   });
   const [availableExams, setAvailableExams] = useState<string[]>([]);
+  const [examDropdownOpen, setExamDropdownOpen] = useState(false);
   const [yearFilter, setYearFilter] = useState(() => getInitialState('yearFilter', ""));
   const [hasAnswerFilter, setHasAnswerFilter] = useState(() => getInitialState('hasAnswerFilter', "all"));
   const [sortOrder, setSortOrder] = useState(() => getInitialState('sortOrder', "newest"));
@@ -146,7 +147,16 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
       query = query.eq("subtopic_id", selectedSubtopic);
     }
     if (examFilter.length > 0) {
-      query = query.in("exam", examFilter);
+      const hasNone = examFilter.includes("__NONE__");
+      const realExams = examFilter.filter(e => e !== "__NONE__");
+      
+      if (hasNone && realExams.length > 0) {
+        query = query.or(`exam.in.(${realExams.map(e => `"${e}"`).join(',')}),exam.is.null`);
+      } else if (hasNone) {
+        query = query.is("exam", null);
+      } else {
+        query = query.in("exam", realExams);
+      }
     }
     if (yearFilter) {
       query = query.eq("year", parseInt(yearFilter));
@@ -376,27 +386,51 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
             className="w-24 border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
           />
 
-          {availableExams.length > 0 && (
-            <div className="w-full flex flex-wrap gap-2 mt-2 pt-3 border-t border-gray-100">
-              <span className="text-sm text-gray-500 font-medium py-1">Exams:</span>
-              {availableExams.map(ex => (
-                <button
-                  key={ex}
-                  onClick={() => {
-                    setExamFilter(prev => prev.includes(ex) ? prev.filter(e => e !== ex) : [...prev, ex]);
-                    setPage(1);
-                  }}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
-                    Array.isArray(examFilter) && examFilter.includes(ex) 
-                      ? 'bg-blue-600 text-white border-blue-600' 
-                      : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
-                  }`}
-                >
-                  {ex}
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="relative">
+            <button 
+              onClick={() => setExamDropdownOpen(!examDropdownOpen)}
+              className="border border-gray-300 rounded-md px-3 py-2 bg-white flex items-center justify-between min-w-[140px] focus:ring-2 focus:ring-blue-500"
+            >
+              <span className="text-sm truncate">
+                {examFilter.length === 0 ? "Exams: All" : `Exams (${examFilter.length})`}
+              </span>
+              <ChevronDown size={16} className="text-gray-400 ml-2" />
+            </button>
+            
+            {examDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setExamDropdownOpen(false)}></div>
+                <div className="absolute z-20 top-full mt-1 left-0 w-48 bg-white border border-gray-200 shadow-lg rounded-md py-1 max-h-64 overflow-y-auto">
+                  <label className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={examFilter.includes("__NONE__")} 
+                      onChange={() => {
+                        setExamFilter(prev => prev.includes("__NONE__") ? prev.filter(e => e !== "__NONE__") : [...prev, "__NONE__"]);
+                        setPage(1);
+                      }} 
+                      className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                    />
+                    <span className="text-sm text-gray-700 italic">No Exam (Blank)</span>
+                  </label>
+                  {availableExams.map(ex => (
+                    <label key={ex} className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={examFilter.includes(ex)} 
+                        onChange={() => {
+                          setExamFilter(prev => prev.includes(ex) ? prev.filter(e => e !== ex) : [...prev, ex]);
+                          setPage(1);
+                        }} 
+                        className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                      />
+                      <span className="text-sm text-gray-700">{ex}</span>
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Selection Bar */}
