@@ -33,20 +33,20 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
   };
 
   // Filters
-  const [search, setSearch] = useState(() => getInitialState('search', ""));
-  const [selectedSubtopic, setSelectedSubtopic] = useState(() => getInitialState('selectedSubtopic', "all"));
+  const [search, setSearch] = useState<string>(() => getInitialState('search', ""));
+  const [selectedSubtopic, setSelectedSubtopic] = useState<string>(() => getInitialState('selectedSubtopic', "all"));
   const [examFilter, setExamFilter] = useState<string[]>(() => {
     const init = getInitialState('examFilter', []);
     return Array.isArray(init) ? init : (init ? [init] : []);
   });
   const [availableExams, setAvailableExams] = useState<string[]>([]);
   const [examDropdownOpen, setExamDropdownOpen] = useState(false);
-  const [yearFilter, setYearFilter] = useState(() => getInitialState('yearFilter', ""));
-  const [hasAnswerFilter, setHasAnswerFilter] = useState(() => getInitialState('hasAnswerFilter', "all"));
-  const [sortOrder, setSortOrder] = useState(() => getInitialState('sortOrder', "newest"));
+  const [yearFilter, setYearFilter] = useState<string>(() => getInitialState('yearFilter', ""));
+  const [hasAnswerFilter, setHasAnswerFilter] = useState<string>(() => getInitialState('hasAnswerFilter', "all"));
+  const [sortOrder, setSortOrder] = useState<string>(() => getInitialState('sortOrder', "newest"));
   
   // Pagination
-  const [page, setPage] = useState(() => getInitialState('page', 1));
+  const [page, setPage] = useState<number>(() => getInitialState('page', 1));
   const itemsPerPage = 20;
 
   // Toggle Answers
