@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { BookOpen, Upload, Folder, Star, Menu, X, Library } from "lucide-react";
+import { BookOpen, Upload, Folder, Star, Menu, X, Library, LogOut } from "lucide-react";
+import { logout } from "@/app/actions";
 
 export default function SidebarLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -12,6 +13,10 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
   const category = searchParams.get('category') || 'CS';
 
   const closeSidebar = () => setSidebarOpen(false);
+
+  if (pathname === '/login') {
+    return <>{children}</>;
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -38,7 +43,7 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
 
       {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 z-50 transform transition-transform duration-200 ease-in-out print:hidden
+        fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 z-50 transform transition-transform duration-200 ease-in-out print:hidden flex flex-col
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         <div className="p-6 flex items-center justify-between">
@@ -66,6 +71,14 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
             <Upload size={18} /> Import JSON
           </Link>
         </nav>
+        
+        <div className="p-4 border-t border-gray-200 mt-auto">
+          <form action={logout}>
+            <button type="submit" className="flex items-center gap-3 px-3 py-2 w-full rounded-md hover:bg-red-50 text-red-600 font-medium transition-colors">
+              <LogOut size={18} /> Sign Out
+            </button>
+          </form>
+        </div>
       </aside>
 
       {/* Main Content */}
