@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { generateAnswer } from "@/app/actions/generate-answer";
+import { generateExplanation } from "@/app/actions/generate-explanation";
 
 export default function SubjectQuestionsPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -22,6 +23,8 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
   const [isProcessing, setIsProcessing] = useState(false);
   const [generatingAnswers, setGeneratingAnswers] = useState<Set<string>>(new Set());
   const [generatedAnswers, setGeneratedAnswers] = useState<Record<string, {answer: string, explanation: string}>>({});
+  const [generatingExplanations, setGeneratingExplanations] = useState<Set<string>>(new Set());
+  const [generatedExplanations, setGeneratedExplanations] = useState<Record<string, string>>({});
   
   const getInitialState = (key: string, defaultVal: any) => {
     if (typeof window === 'undefined') return defaultVal;
@@ -264,6 +267,53 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
         return next;
       });
       alert("Answer saved successfully!");
+    }
+    setIsProcessing(false);
+  };
+  const handleGenerateExplanation = async (q: any) => {
+    setGeneratingExplanations(prev => new Set(prev).add(q.id));
+    try {
+      const response = await generateExplanation(q);
+      if (response.error) {
+        alert(response.error);
+      } else if (response.result) {
+        setGeneratedExplanations(prev => ({
+          ...prev,
+          [q.id]: response.result
+        }));
+        setVisibleAnswers(prev => new Set(prev).add(q.id));
+      }
+    } catch (e) {
+      alert("Failed to connect to AI service.");
+    } finally {
+      setGeneratingExplanations(prev => {
+        const next = new Set(prev);
+        next.delete(q.id);
+        return next;
+      });
+    }
+  };
+
+  const handleSaveGeneratedExplanation = async (id: string) => {
+    const text = generatedExplanations[id];
+    if (!text) return;
+    setIsProcessing(true);
+    const { error } = await supabase.from('questions').update({
+      explanation: text
+    }).eq('id', id);
+    
+    if (error) {
+      alert("Failed to save explanation: " + error.message);
+    } else {
+      const updated = questions.map(q => q.id === id ? { ...q, explanation: text } : q);
+      setQuestions(updated);
+      updateCache(updated);
+      setGeneratedExplanations(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      alert("Explanation saved successfully!");
     }
     setIsProcessing(false);
   };
@@ -659,10 +709,39 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
                             <MarkdownRenderer content={q.answer} className="text-gray-800 flex-1" />
                           </div>
                         )}
-                        {q.explanation && (
+                        {q.explanation ? (
                           <div className="flex items-start gap-2">
                             <span className="font-semibold text-blue-700 shrink-0">Explanation:</span>
                             <MarkdownRenderer content={q.explanation} className="text-gray-600 flex-1" />
+                          </div>
+                        ) : generatedExplanations[q.id] ? (
+                          <div className="bg-purple-50 p-3 rounded border border-purple-200 mt-2 relative animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="absolute top-2 right-2 flex gap-2">
+                              <button onClick={() => handleSaveGeneratedExplanation(q.id)} className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-purple-700 transition-colors flex items-center gap-1">
+                                Save Explanation
+                              </button>
+                              <button onClick={() => setGeneratedExplanations(prev => { const next = {...prev}; delete next[q.id]; return next; })} className="text-gray-400 hover:text-gray-600">
+                                <X size={14} />
+                              </button>
+                            </div>
+                            <div className="flex items-start gap-2 pr-28">
+                              <span className="font-semibold text-purple-700 shrink-0">AI Explanation:</span>
+                              <MarkdownRenderer content={generatedExplanations[q.id]} className="text-gray-600 flex-1" />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-2">
+                            <button 
+                              onClick={() => handleGenerateExplanation(q)}
+                              disabled={generatingExplanations.has(q.id)}
+                              className="text-purple-600 font-medium text-xs hover:underline flex items-center gap-1 bg-purple-50 px-3 py-1.5 rounded-full border border-purple-100"
+                            >
+                              {generatingExplanations.has(q.id) ? (
+                                <><Loader2 size={14} className="animate-spin" /> Generating...</>
+                              ) : (
+                                <><Sparkles size={14} /> Generate Explanation with AI</>
+                              )}
+                            </button>
                           </div>
                         )}
                       </div>
