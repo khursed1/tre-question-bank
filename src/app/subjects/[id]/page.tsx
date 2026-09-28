@@ -2,10 +2,11 @@
 
 import { useState, useEffect, use, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { Search, Filter, Edit, Trash2, Star, Download, ChevronLeft, ChevronRight, ChevronDown, X, FolderInput, CheckSquare, Square, Loader2 } from "lucide-react";
+import { Search, Filter, Edit, Trash2, Star, Download, ChevronLeft, ChevronRight, ChevronDown, X, FolderInput, CheckSquare, Square, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
+import { generateAnswer } from "@/app/actions/generate-answer";
 
 export default function SubjectQuestionsPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -19,6 +20,8 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [generatingAnswers, setGeneratingAnswers] = useState<Set<string>>(new Set());
+  const [generatedAnswers, setGeneratedAnswers] = useState<Record<string, {answer: string, explanation: string}>>({});
   
   const getInitialState = (key: string, defaultVal: any) => {
     if (typeof window === 'undefined') return defaultVal;
@@ -215,6 +218,55 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
     setIsProcessing(false);
   };
 
+  const handleGenerateAnswer = async (q: any) => {
+    setGeneratingAnswers(prev => new Set(prev).add(q.id));
+    try {
+      const response = await generateAnswer(q);
+      if (response.error) {
+        alert(response.error);
+      } else if (response.result) {
+        setGeneratedAnswers(prev => ({
+          ...prev,
+          [q.id]: response.result
+        }));
+        // Show the answer section
+        setVisibleAnswers(prev => new Set(prev).add(q.id));
+      }
+    } catch (e) {
+      alert("Failed to connect to AI service.");
+    } finally {
+      setGeneratingAnswers(prev => {
+        const next = new Set(prev);
+        next.delete(q.id);
+        return next;
+      });
+    }
+  };
+
+  const handleSaveGeneratedAnswer = async (id: string) => {
+    const data = generatedAnswers[id];
+    if (!data) return;
+    setIsProcessing(true);
+    const { error } = await supabase.from('questions').update({
+      answer: data.answer,
+      explanation: data.explanation
+    }).eq('id', id);
+    
+    if (error) {
+      alert("Failed to save answer: " + error.message);
+    } else {
+      const updated = questions.map(q => q.id === id ? { ...q, answer: data.answer, explanation: data.explanation } : q);
+      setQuestions(updated);
+      updateCache(updated);
+      setGeneratedAnswers(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      alert("Answer saved successfully!");
+    }
+    setIsProcessing(false);
+  };
   const generatePDF = () => {
     setShowExportModal(false);
     setTimeout(() => {
@@ -591,7 +643,7 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
                   )}
                 </div>
 
-                {(q.answer || q.explanation) && (
+                {(q.answer || q.explanation) ? (
                   <div className="mt-4 pt-4 border-t border-gray-100 text-sm pl-8">
                     <button 
                       onClick={() => toggleAnswer(q.id)}
@@ -615,6 +667,41 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
                         )}
                       </div>
                     )}
+                  </div>
+                ) : generatedAnswers[q.id] ? (
+                  <div className="mt-4 pt-4 border-t border-gray-100 text-sm pl-8">
+                    <div className="bg-purple-50 p-4 rounded border border-purple-200 mt-3 relative animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="absolute top-3 right-3 flex gap-2">
+                        <button onClick={() => handleSaveGeneratedAnswer(q.id)} className="bg-purple-600 text-white px-3 py-1 rounded text-xs font-medium hover:bg-purple-700 transition-colors flex items-center gap-1">
+                          Save Answer
+                        </button>
+                        <button onClick={() => setGeneratedAnswers(prev => { const next = {...prev}; delete next[q.id]; return next; })} className="text-gray-400 hover:text-gray-600">
+                          <X size={16} />
+                        </button>
+                      </div>
+                      <div className="mb-2 flex items-start gap-2 pr-24">
+                        <span className="font-semibold text-green-700 shrink-0">Answer:</span>
+                        <MarkdownRenderer content={generatedAnswers[q.id].answer} className="text-gray-800 flex-1" />
+                      </div>
+                      <div className="flex items-start gap-2 pr-24">
+                        <span className="font-semibold text-purple-700 shrink-0">Explanation:</span>
+                        <MarkdownRenderer content={generatedAnswers[q.id].explanation} className="text-gray-600 flex-1" />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 pt-4 border-t border-gray-100 text-sm pl-8">
+                    <button 
+                      onClick={() => handleGenerateAnswer(q)}
+                      disabled={generatingAnswers.has(q.id)}
+                      className="text-purple-600 font-medium text-sm hover:underline flex items-center gap-1.5"
+                    >
+                      {generatingAnswers.has(q.id) ? (
+                        <><Loader2 size={16} className="animate-spin" /> Generating...</>
+                      ) : (
+                        <><Sparkles size={16} /> Generate Answer with AI</>
+                      )}
+                    </button>
                   </div>
                 )}
               </div>
