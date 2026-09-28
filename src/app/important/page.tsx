@@ -20,6 +20,17 @@ export default function ImportantQuestionsPage() {
     blankSpace: false,
   });
 
+  const [visibleAnswers, setVisibleAnswers] = useState<Set<string>>(new Set());
+
+  const toggleAnswer = (id: string) => {
+    setVisibleAnswers(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   useEffect(() => {
     fetchImportantQuestions();
   }, []);
@@ -153,16 +164,26 @@ export default function ImportantQuestionsPage() {
 
                 {(q.answer || q.explanation) && (
                   <div className="mt-4 pt-4 border-t border-gray-100 text-sm">
-                    {q.answer && (
-                      <div className="mb-2 flex items-start gap-2">
-                        <span className="font-semibold text-green-700 shrink-0">Answer:</span>
-                        <MarkdownRenderer content={q.answer} className="text-gray-800 flex-1" />
-                      </div>
-                    )}
-                    {q.explanation && (
-                      <div className="flex items-start gap-2">
-                        <span className="font-semibold text-gray-700 shrink-0">Explanation:</span>
-                        <MarkdownRenderer content={q.explanation} className="text-gray-600 flex-1" />
+                    <button 
+                      onClick={() => toggleAnswer(q.id)}
+                      className="text-blue-600 font-medium text-sm hover:underline flex items-center gap-1 mb-2"
+                    >
+                      {visibleAnswers.has(q.id) ? "Hide Answer & Explanation" : "Show Answer & Explanation"}
+                    </button>
+                    {visibleAnswers.has(q.id) && (
+                      <div className="bg-gray-50 p-4 rounded border border-gray-200 mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                        {q.answer && (
+                          <div className="mb-2 flex items-start gap-2">
+                            <span className="font-semibold text-green-700 shrink-0">Answer:</span>
+                            <MarkdownRenderer content={q.answer} className="text-gray-800 flex-1" />
+                          </div>
+                        )}
+                        {q.explanation && (
+                          <div className="flex items-start gap-2">
+                            <span className="font-semibold text-blue-700 shrink-0">Explanation:</span>
+                            <MarkdownRenderer content={q.explanation} className="text-gray-600 flex-1" />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

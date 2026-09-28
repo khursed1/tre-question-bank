@@ -2,6 +2,8 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Folder } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   const { data: subjects, error } = await supabase
     .from("subjects")

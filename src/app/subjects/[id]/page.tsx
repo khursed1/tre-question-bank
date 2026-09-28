@@ -35,7 +35,11 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
   // Filters
   const [search, setSearch] = useState(() => getInitialState('search', ""));
   const [selectedSubtopic, setSelectedSubtopic] = useState(() => getInitialState('selectedSubtopic', "all"));
-  const [examFilter, setExamFilter] = useState(() => getInitialState('examFilter', ""));
+  const [examFilter, setExamFilter] = useState<string[]>(() => {
+    const init = getInitialState('examFilter', []);
+    return Array.isArray(init) ? init : (init ? [init] : []);
+  });
+  const [availableExams, setAvailableExams] = useState<string[]>([]);
   const [yearFilter, setYearFilter] = useState(() => getInitialState('yearFilter', ""));
   const [hasAnswerFilter, setHasAnswerFilter] = useState(() => getInitialState('hasAnswerFilter', "all"));
   const [sortOrder, setSortOrder] = useState(() => getInitialState('sortOrder', "newest"));
@@ -43,6 +47,18 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
   // Pagination
   const [page, setPage] = useState(() => getInitialState('page', 1));
   const itemsPerPage = 20;
+
+  // Toggle Answers
+  const [visibleAnswers, setVisibleAnswers] = useState<Set<string>>(new Set());
+  
+  const toggleAnswer = (id: string) => {
+    setVisibleAnswers(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   useEffect(() => {
     sessionStorage.setItem(`view_state_${subjectId}`, JSON.stringify({
@@ -98,9 +114,14 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
 
     const { data: subj } = await supabase.from("subjects").select("*").eq("id", subjectId).single();
     const { data: subs } = await supabase.from("subtopics").select("*").eq("subject_id", subjectId).order("name");
+    const { data: qData } = await supabase.from("questions").select("exam").eq("subject_id", subjectId).not("exam", "is", null);
     
     if (subj) setSubject(subj);
     if (subs) setSubtopics(subs);
+    if (qData) {
+      const exams = Array.from(new Set(qData.map(q => q.exam).filter(Boolean))).sort();
+      setAvailableExams(exams as string[]);
+    }
     
     if (subj && subs) {
       sessionStorage.setItem(cacheKey, JSON.stringify({ subj, subs }));
@@ -108,7 +129,8 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
   };
 
   const fetchQuestions = async () => {
-    const cacheKey = `questions_${subjectId}_${selectedSubtopic}_${examFilter}_${yearFilter}_${hasAnswerFilter}_${search}_${sortOrder}`;
+    const examKey = Array.isArray(examFilter) ? examFilter.join(',') : '';
+    const cacheKey = `questions_${subjectId}_${selectedSubtopic}_${examKey}_${yearFilter}_${hasAnswerFilter}_${search}_${sortOrder}`;
     const cachedData = sessionStorage.getItem(cacheKey);
     
     if (cachedData) {
@@ -123,8 +145,8 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
     if (selectedSubtopic !== "all") {
       query = query.eq("subtopic_id", selectedSubtopic);
     }
-    if (examFilter) {
-      query = query.ilike("exam", `%${examFilter}%`);
+    if (examFilter.length > 0) {
+      query = query.in("exam", examFilter);
     }
     if (yearFilter) {
       query = query.eq("year", parseInt(yearFilter));
@@ -158,7 +180,8 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
   };
 
   const updateCache = (newQuestions: any[]) => {
-    const cacheKey = `questions_${subjectId}_${selectedSubtopic}_${examFilter}_${yearFilter}_${hasAnswerFilter}_${search}_${sortOrder}`;
+    const examKey = Array.isArray(examFilter) ? examFilter.join(',') : '';
+    const cacheKey = `questions_${subjectId}_${selectedSubtopic}_${examKey}_${yearFilter}_${hasAnswerFilter}_${search}_${sortOrder}`;
     sessionStorage.setItem(cacheKey, JSON.stringify(newQuestions));
   };
 
@@ -336,14 +359,6 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
             <option value="no">No Answer</option>
           </select>
 
-          <input 
-            type="text" 
-            placeholder="Exam (e.g. GATE)" 
-            value={examFilter}
-            onChange={(e) => { setExamFilter(e.target.value); setPage(1); }}
-            className="w-32 border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          
           <select 
             value={sortOrder} 
             onChange={(e) => { setSortOrder(e.target.value); setPage(1); }}
@@ -360,6 +375,28 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
             onChange={(e) => { setYearFilter(e.target.value); setPage(1); }}
             className="w-24 border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
           />
+
+          {availableExams.length > 0 && (
+            <div className="w-full flex flex-wrap gap-2 mt-2 pt-3 border-t border-gray-100">
+              <span className="text-sm text-gray-500 font-medium py-1">Exams:</span>
+              {availableExams.map(ex => (
+                <button
+                  key={ex}
+                  onClick={() => {
+                    setExamFilter(prev => prev.includes(ex) ? prev.filter(e => e !== ex) : [...prev, ex]);
+                    setPage(1);
+                  }}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                    Array.isArray(examFilter) && examFilter.includes(ex) 
+                      ? 'bg-blue-600 text-white border-blue-600' 
+                      : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                  }`}
+                >
+                  {ex}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Selection Bar */}
@@ -522,16 +559,26 @@ export default function SubjectQuestionsPage({ params }: { params: Promise<{ id:
 
                 {(q.answer || q.explanation) && (
                   <div className="mt-4 pt-4 border-t border-gray-100 text-sm pl-8">
-                    {q.answer && (
-                      <div className="mb-2 flex items-start gap-2">
-                        <span className="font-semibold text-green-700 shrink-0">Answer:</span>
-                        <MarkdownRenderer content={q.answer} className="text-gray-800 flex-1" />
-                      </div>
-                    )}
-                    {q.explanation && (
-                      <div className="flex items-start gap-2">
-                        <span className="font-semibold text-gray-700 shrink-0">Explanation:</span>
-                        <MarkdownRenderer content={q.explanation} className="text-gray-600 flex-1" />
+                    <button 
+                      onClick={() => toggleAnswer(q.id)}
+                      className="text-blue-600 font-medium text-sm hover:underline flex items-center gap-1 mb-2"
+                    >
+                      {visibleAnswers.has(q.id) ? "Hide Answer & Explanation" : "Show Answer & Explanation"}
+                    </button>
+                    {visibleAnswers.has(q.id) && (
+                      <div className="bg-gray-50 p-4 rounded border border-gray-200 mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                        {q.answer && (
+                          <div className="mb-2 flex items-start gap-2">
+                            <span className="font-semibold text-green-700 shrink-0">Answer:</span>
+                            <MarkdownRenderer content={q.answer} className="text-gray-800 flex-1" />
+                          </div>
+                        )}
+                        {q.explanation && (
+                          <div className="flex items-start gap-2">
+                            <span className="font-semibold text-blue-700 shrink-0">Explanation:</span>
+                            <MarkdownRenderer content={q.explanation} className="text-gray-600 flex-1" />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
