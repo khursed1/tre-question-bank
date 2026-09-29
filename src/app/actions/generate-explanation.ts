@@ -1,16 +1,15 @@
 'use server'
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 
 export async function generateExplanation(questionData: any) {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    return { error: 'Please set GEMINI_API_KEY in your environment variables to use this feature.' };
+    return { error: 'Please set OPENAI_API_KEY in your environment variables to use this feature.' };
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.8-flash' });
+    const openai = new OpenAI({ apiKey });
 
     const prompt = `
 You are an expert tutor and subject matter expert. Your task is to provide a detailed explanation for the following multiple-choice question, given the correct answer.
@@ -32,20 +31,24 @@ Please return ONLY the explanation text. No conversational filler, no markdown c
 Use markdown for formatting, and enclose math in $ $ for inline or $$ $$ for block math. Explain why the given answer is correct, and why other options might be wrong.
 `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let text = response.text().trim();
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+    });
+    
+    let text = response.choices[0].message.content || '';
+    text = text.trim();
     
     // Clean up if it returned markdown block
-    if (text.startsWith('\`\`\`markdown')) {
-      text = text.replace(/^\`\`\`markdown\n?/, '').replace(/\n?\`\`\`$/, '');
-    } else if (text.startsWith('\`\`\`')) {
-      text = text.replace(/^\`\`\`\n?/, '').replace(/\n?\`\`\`$/, '');
+    if (text.startsWith('```markdown')) {
+      text = text.replace(/^```markdown\n?/, '').replace(/\n?```$/, '');
+    } else if (text.startsWith('```')) {
+      text = text.replace(/^```\n?/, '').replace(/\n?```$/, '');
     }
 
     return { result: text.trim() };
   } catch (error: any) {
-    console.error('Gemini API Error:', error);
+    console.error('OpenAI API Error:', error);
     return { error: error.message || 'Failed to generate explanation.' };
   }
 }
