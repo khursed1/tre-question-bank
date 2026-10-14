@@ -61,7 +61,7 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
           <Link onClick={closeSidebar} href="/?category=General" className={`flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 ${pathname === '/' && category === 'General' ? 'bg-gray-100 font-medium' : ''}`}>
             <Library size={18} /> General Subjects
           </Link>
-          <Link onClick={closeSidebar} href="/subjects" className={`flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 ${pathname === '/subjects' ? 'bg-gray-100 font-medium' : ''}`}>
+          <Link onClick={closeSidebar} href={category === 'General' ? "/subjects?category=General" : "/subjects"} className={`flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 ${pathname === '/subjects' ? 'bg-gray-100 font-medium' : ''}`}>
             <Folder size={18} /> Manage Subjects
           </Link>
           <Link onClick={closeSidebar} href="/important" className={`flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 ${pathname === '/important' ? 'bg-gray-100 font-medium' : ''}`}>

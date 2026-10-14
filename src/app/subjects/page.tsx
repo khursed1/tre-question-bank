@@ -1,18 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
-import { Folder, Plus, Trash2, Edit, Save, X, GitMerge, CheckSquare, Square } from "lucide-react";
+import { Folder, Plus, Trash2, Edit, Save, X, GitMerge, CheckSquare, Square, Search } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
-export default function SubjectsPage() {
+function SubjectsContent() {
+  const searchParams = useSearchParams();
+  const initialCategory = searchParams.get("category") === "General" ? "General" : searchParams.get("category") === "CS" ? "CS" : "All";
+
   const [subjects, setSubjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [newSubject, setNewSubject] = useState("");
-  const [newSubjectCategory, setNewSubjectCategory] = useState("CS");
+  const [newSubjectCategory, setNewSubjectCategory] = useState(initialCategory === "General" ? "General" : "CS");
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [editCategory, setEditCategory] = useState("CS");
   const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Merge State
@@ -24,6 +31,18 @@ export default function SubjectsPage() {
   useEffect(() => {
     fetchSubjects();
   }, []);
+
+  // Sync category tab with query param if it changes
+  useEffect(() => {
+    const cat = searchParams.get("category");
+    if (cat === "General") {
+      setSelectedCategory("General");
+      setNewSubjectCategory("General");
+    } else if (cat === "CS") {
+      setSelectedCategory("CS");
+      setNewSubjectCategory("CS");
+    }
+  }, [searchParams]);
 
   const fetchSubjects = async () => {
     setLoading(true);
@@ -65,9 +84,10 @@ export default function SubjectsPage() {
     }
   };
 
-  const handleEditClick = (id: string, currentName: string) => {
+  const handleEditClick = (id: string, currentName: string, currentCategory: string) => {
     setEditingId(id);
     setEditName(currentName);
+    setEditCategory(currentCategory || "CS");
   };
 
   const handleRenameSubmit = async (id: string) => {
@@ -75,7 +95,10 @@ export default function SubjectsPage() {
       setEditingId(null);
       return;
     }
-    const { error } = await supabase.from("subjects").update({ name: editName.trim() }).eq("id", id);
+    const { error } = await supabase
+      .from("subjects")
+      .update({ name: editName.trim(), category: editCategory })
+      .eq("id", id);
     if (!error) {
       setEditingId(null);
       fetchSubjects();
@@ -84,10 +107,10 @@ export default function SubjectsPage() {
     }
   };
 
-  const handleTouchStart = (id: string, currentName: string) => {
+  const handleTouchStart = (id: string, currentName: string, currentCategory: string) => {
     if (editingId === id) return; // Prevent resetting while already editing
     const timer = setTimeout(() => {
-      handleEditClick(id, currentName);
+      handleEditClick(id, currentName, currentCategory);
       if (window.navigator && window.navigator.vibrate) {
         window.navigator.vibrate(50);
       }
@@ -126,25 +149,31 @@ export default function SubjectsPage() {
 
     setMerging(true);
     try {
+      const firstSelected = subjects.find(s => selectedForMerge.includes(s.id));
+      const targetCategory = firstSelected?.category || (selectedCategory === "General" ? "General" : "CS");
+
       // 1. Determine target subject (existing or new)
       let { data: existingSubj } = await supabase.from("subjects").select("*").eq("name", mergeName.trim()).single();
       let targetSubjectId = existingSubj?.id;
 
       if (!targetSubjectId) {
-        const { data: newSubj, error: createErr } = await supabase.from("subjects").insert({ name: mergeName.trim() }).select().single();
+        const { data: newSubj, error: createErr } = await supabase
+          .from("subjects")
+          .insert({ name: mergeName.trim(), category: targetCategory })
+          .select()
+          .single();
         if (createErr) throw createErr;
         targetSubjectId = newSubj.id;
       }
 
       // 2. Fetch target subject's subtopics to handle unique constraints safely
       const { data: targetSubtopics } = await supabase.from("subtopics").select("*").eq("subject_id", targetSubjectId);
-      const targetSubtopicMap = new Map((targetSubtopics || []).map(s => [s.name.toLowerCase(), s.id]));
+      const targetSubtopicMap = new Map((targetSubtopics || []).map(st => [st.name.toLowerCase(), st.id]));
 
-      // 3. Process each selected subject
-      for (const sourceId of selectedForMerge) {
-        if (sourceId === targetSubjectId) continue; // Skip if merging into itself
+      // 3. Migrate subtopics and questions from selected subjects
+      const sourcesToMigrate = selectedForMerge.filter(id => id !== targetSubjectId);
 
-        // Fetch subtopics of the source subject
+      for (const sourceId of sourcesToMigrate) {
         const { data: sourceSubtopics } = await supabase.from("subtopics").select("*").eq("subject_id", sourceId);
 
         for (const st of (sourceSubtopics || [])) {
@@ -182,12 +211,26 @@ export default function SubjectsPage() {
     }
   };
 
+  const csCount = subjects.filter(s => s.category !== 'General').length;
+  const generalCount = subjects.filter(s => s.category === 'General').length;
+
+  const filteredSubjects = subjects.filter((s) => {
+    const matchesCategory =
+      selectedCategory === "All"
+        ? true
+        : selectedCategory === "General"
+        ? s.category === "General"
+        : s.category !== "General";
+    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
+    return matchesCategory && matchesSearch;
+  });
+
   return (
     <div className="max-w-4xl mx-auto pb-12">
       <header className="mb-8 flex flex-col sm:flex-row justify-between sm:items-end gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Manage Subjects</h1>
-          <p className="text-gray-500 mt-2">Create, rename, merge or remove subjects.</p>
+          <p className="text-gray-500 mt-2">Create, rename, categorize, merge or remove subjects.</p>
         </div>
         <button 
           onClick={openMergeModal}
@@ -197,6 +240,7 @@ export default function SubjectsPage() {
         </button>
       </header>
 
+      {/* Add New Subject */}
       <div className="bg-white p-6 rounded-lg border border-gray-200 mb-8 shadow-sm">
         <h2 className="text-lg font-medium mb-4">Add New Subject</h2>
         <form onSubmit={handleAddSubject} className="flex flex-col sm:flex-row gap-3">
@@ -204,7 +248,7 @@ export default function SubjectsPage() {
             type="text"
             value={newSubject}
             onChange={(e) => setNewSubject(e.target.value)}
-            placeholder="e.g., Computer Networks"
+            placeholder="e.g., General Studies or Computer Networks"
             className="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
           <select
@@ -225,32 +269,100 @@ export default function SubjectsPage() {
         </form>
       </div>
 
+      {/* Category Tabs & Search */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+        <div className="flex border-b border-gray-200 gap-1 w-full sm:w-auto">
+          <button
+            onClick={() => setSelectedCategory("All")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-2 transition-colors ${
+              selectedCategory === "All"
+                ? "border-blue-600 text-blue-600 font-semibold"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            All Subjects
+            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-normal">
+              {subjects.length}
+            </span>
+          </button>
+          <button
+            onClick={() => {
+              setSelectedCategory("CS");
+              setNewSubjectCategory("CS");
+            }}
+            className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-2 transition-colors ${
+              selectedCategory === "CS"
+                ? "border-blue-600 text-blue-600 font-semibold"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            CS Subjects
+            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+              {csCount}
+            </span>
+          </button>
+          <button
+            onClick={() => {
+              setSelectedCategory("General");
+              setNewSubjectCategory("General");
+            }}
+            className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-2 transition-colors ${
+              selectedCategory === "General"
+                ? "border-purple-600 text-purple-600 font-semibold"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            General Subjects
+            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+              {generalCount}
+            </span>
+          </button>
+        </div>
+
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search subjects..."
+            className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          />
+        </div>
+      </div>
+
+      {/* Subjects List */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-8">
         <div className="p-4 bg-gray-50 border-b border-gray-200 font-medium text-gray-700 flex justify-between">
-          <span>Subject Name</span>
+          <span>
+            {selectedCategory === "All" ? "All Subjects" : selectedCategory === "General" ? "General Subjects" : "CS Subjects"}
+            <span className="text-gray-500 font-normal ml-2">({filteredSubjects.length})</span>
+          </span>
           <span className="hidden sm:inline">Actions</span>
         </div>
         
         {loading ? (
           <div className="p-8 text-center text-gray-500">Loading subjects...</div>
-        ) : subjects.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">No subjects found. Add one above!</div>
+        ) : filteredSubjects.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            {searchQuery ? "No subjects match your search." : `No ${selectedCategory === "All" ? "" : selectedCategory + " "}subjects found.`}
+          </div>
         ) : (
           <ul className="divide-y divide-gray-200 select-none">
-            {subjects.map((subject) => (
+            {filteredSubjects.map((subject) => (
               <li 
                 key={subject.id} 
                 className="p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-gray-50 gap-4"
-                onTouchStart={() => handleTouchStart(subject.id, subject.name)}
+                onTouchStart={() => handleTouchStart(subject.id, subject.name, subject.category)}
                 onTouchEnd={handleTouchEnd}
                 onTouchMove={handleTouchEnd}
-                onMouseDown={() => handleTouchStart(subject.id, subject.name)}
+                onMouseDown={() => handleTouchStart(subject.id, subject.name, subject.category)}
                 onMouseUp={handleTouchEnd}
                 onMouseLeave={handleTouchEnd}
               >
                 {editingId === subject.id ? (
                   <div 
-                    className="flex-1 flex gap-2 w-full" 
+                    className="flex-1 flex flex-col sm:flex-row gap-2 w-full" 
                     onClick={e => e.stopPropagation()}
                     onTouchStart={e => e.stopPropagation()}
                     onMouseDown={e => e.stopPropagation()}
@@ -261,31 +373,45 @@ export default function SubjectsPage() {
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleRenameSubmit(subject.id)}
-                      className="flex-1 border border-blue-300 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="flex-1 border border-blue-300 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     />
-                    <button 
-                      onClick={() => handleRenameSubmit(subject.id)}
-                      className="bg-green-600 text-white p-2 rounded hover:bg-green-700"
-                      title="Save"
+                    <select
+                      value={editCategory}
+                      onChange={(e) => setEditCategory(e.target.value)}
+                      className="border border-blue-300 rounded px-3 py-1.5 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <Save size={18} />
-                    </button>
-                    <button 
-                      onClick={() => setEditingId(null)}
-                      className="bg-gray-200 text-gray-700 p-2 rounded hover:bg-gray-300"
-                      title="Cancel"
-                    >
-                      <X size={18} />
-                    </button>
+                      <option value="CS">CS Subject</option>
+                      <option value="General">General Subject</option>
+                    </select>
+                    <div className="flex gap-2 shrink-0">
+                      <button 
+                        onClick={() => handleRenameSubmit(subject.id)}
+                        className="bg-green-600 text-white p-2 rounded hover:bg-green-700"
+                        title="Save"
+                      >
+                        <Save size={18} />
+                      </button>
+                      <button 
+                        onClick={() => setEditingId(null)}
+                        className="bg-gray-200 text-gray-700 p-2 rounded hover:bg-gray-300"
+                        title="Cancel"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <>
                     <div className="flex items-center gap-3 cursor-pointer sm:cursor-default w-full sm:w-auto overflow-hidden">
-                      <Folder className="text-gray-400 shrink-0" size={20} />
+                      <Folder className={subject.category === 'General' ? "text-purple-500 shrink-0" : "text-blue-500 shrink-0"} size={20} />
                       <div className="flex-1 min-w-0">
                         <span className="font-medium text-gray-800 truncate block">{subject.name}</span>
                         <div>
-                          <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full inline-block mt-1 mr-2 border border-blue-100">
+                          <span className={`text-xs px-2 py-0.5 rounded-full inline-block mt-1 mr-2 border font-medium ${
+                            subject.category === 'General'
+                              ? 'bg-purple-50 text-purple-700 border-purple-200'
+                              : 'bg-blue-50 text-blue-700 border-blue-200'
+                          }`}>
                             {subject.category === 'General' ? 'General' : 'CS'}
                           </span>
                           <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full inline-block mt-1">
@@ -301,9 +427,9 @@ export default function SubjectsPage() {
                       onMouseDown={e => e.stopPropagation()}
                     >
                       <button
-                        onClick={() => handleEditClick(subject.id, subject.name)}
+                        onClick={() => handleEditClick(subject.id, subject.name, subject.category)}
                         className="text-blue-500 hover:text-blue-700 p-2 rounded-md hover:bg-blue-50"
-                        title="Rename Subject"
+                        title="Rename / Recategorize Subject"
                       >
                         <Edit size={18} />
                       </button>
@@ -348,59 +474,82 @@ export default function SubjectsPage() {
                     <div className="p-3 text-sm text-gray-500">No subjects available.</div>
                   ) : (
                     <ul className="divide-y divide-gray-200">
-                      {subjects.map(s => (
+                      {subjects.map((s) => (
                         <li 
-                          key={s.id} 
-                          className="flex items-center gap-3 p-3 hover:bg-gray-100 cursor-pointer"
+                          key={s.id}
                           onClick={() => toggleMergeSelection(s.id)}
+                          className="p-3 flex items-center justify-between hover:bg-gray-100 cursor-pointer"
                         >
-                          {selectedForMerge.includes(s.id) ? (
-                            <CheckSquare className="text-blue-600 shrink-0" size={18} />
-                          ) : (
-                            <Square className="text-gray-400 shrink-0" size={18} />
-                          )}
-                          <span className="text-gray-800 text-sm truncate flex-1">{s.name}</span>
-                          <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded border border-gray-200">{s.questions?.[0]?.count || 0}</span>
+                          <div className="flex items-center gap-2 min-w-0">
+                            {selectedForMerge.includes(s.id) ? (
+                              <CheckSquare size={18} className="text-blue-600 shrink-0" />
+                            ) : (
+                              <Square size={18} className="text-gray-400 shrink-0" />
+                            )}
+                            <span className="text-sm font-medium text-gray-800 truncate">{s.name}</span>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0 ml-2">
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded border font-medium ${
+                              s.category === 'General'
+                                ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                : 'bg-blue-50 text-blue-700 border-blue-200'
+                            }`}>
+                              {s.category === 'General' ? 'General' : 'CS'}
+                            </span>
+                            <span className="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full">
+                              {s.questions?.[0]?.count || 0} qs
+                            </span>
+                          </div>
                         </li>
                       ))}
                     </ul>
                   )}
                 </div>
-                <div className="text-xs text-gray-500 mt-2 text-right">
-                  {selectedForMerge.length} selected
-                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">New Merged Subject Name:</label>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Target Merged Subject Name:</label>
                 <input 
                   type="text"
                   value={mergeName}
                   onChange={(e) => setMergeName(e.target.value)}
-                  placeholder="e.g., General Networking"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., General Studies"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <span className="text-xs text-gray-400 mt-1 block">
+                  You can type an existing subject's name to merge into it, or type a new name.
+                </span>
               </div>
-            </div>
 
-            <div className="p-4 border-t border-gray-200 bg-gray-50 flex gap-3 justify-end shrink-0">
-              <button 
-                onClick={() => setShowMergeModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleMergeSubmit}
-                disabled={merging || selectedForMerge.length < 2 || !mergeName.trim()}
-                className="px-4 py-2 bg-blue-600 rounded text-white hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50"
-              >
-                {merging ? "Merging..." : "Confirm Merge"}
-              </button>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowMergeModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-sm font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={merging || selectedForMerge.length < 2 || !mergeName.trim()}
+                  onClick={handleMergeSubmit}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
+                >
+                  {merging ? "Merging..." : "Confirm & Merge"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+export default function SubjectsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading...</div>}>
+      <SubjectsContent />
+    </Suspense>
   );
 }
