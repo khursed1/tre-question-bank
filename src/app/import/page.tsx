@@ -31,9 +31,21 @@ export default function ImportPage() {
         
         let questions: any[] = [];
         if (Array.isArray(json)) {
-          questions = json;
+          questions = json.map((q: any) => ({
+            ...q,
+            subject: q.subject || q.Subject || q.topic || q.Topic,
+          }));
         } else if (json.questions && Array.isArray(json.questions)) {
-          questions = json.questions;
+          const rootSubject = json.subject || json.Subject || null;
+          const rootExam = json.exam || json.Exam || null;
+          const rootYear = json.year || json.Year || null;
+
+          questions = json.questions.map((q: any) => ({
+            ...q,
+            subject: q.subject || q.Subject || rootSubject || q.topic || q.Topic,
+            exam: q.exam || q.Exam || rootExam,
+            year: q.year || q.Year || rootYear,
+          }));
         } else if (json.subjects && Array.isArray(json.subjects)) {
           // Extract from the nested subjects format
           json.subjects.forEach((subjGroup: any) => {
@@ -41,7 +53,9 @@ export default function ImportPage() {
               subjGroup.questions.forEach((q: any) => {
                 questions.push({
                   ...q,
-                  subject: q.subject || subjGroup.subject,
+                  subject: q.subject || q.Subject || subjGroup.subject || q.topic || q.Topic,
+                  exam: q.exam || q.Exam || json.exam || json.Exam || subjGroup.exam,
+                  year: q.year || q.Year || json.year || json.Year || subjGroup.year,
                 });
               });
             }
@@ -55,7 +69,7 @@ export default function ImportPage() {
         // Generate preview stats
         const subjectCounts: Record<string, number> = {};
         questions.forEach((q) => {
-          const subj = q.subject || q.Subject || "Uncategorized";
+          const subj = q.subject || q.Subject || q.topic || q.Topic || "Uncategorized";
           subjectCounts[subj] = (subjectCounts[subj] || 0) + 1;
         });
 
@@ -93,7 +107,7 @@ export default function ImportPage() {
       const questionsToInsert = [];
 
       for (const q of preview.rawData) {
-        const subjectName = q.subject || q.Subject || "Uncategorized";
+        const subjectName = q.subject || q.Subject || q.topic || q.Topic || "Uncategorized";
         const subtopicName = q.subtopic || q.Subtopic || null;
         
         let subjectId = subjectMap.get(subjectName);
